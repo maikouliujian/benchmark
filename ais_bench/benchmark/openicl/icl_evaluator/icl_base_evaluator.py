@@ -273,6 +273,7 @@ class BaseEvaluator:
         # Run evaluation for each replica
         for i in range(n):
             self._dataset_replica_idx = i
+            # todo
             self.logger.info(f'Running {i+1}-th replica of evaluation')
 
             current_params = {

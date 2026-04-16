@@ -8,6 +8,7 @@ from ais_bench.benchmark.models.output import Output
 from ais_bench.benchmark.utils.logging.error_codes import ICLI_CODES
 from ais_bench.benchmark.utils.logging.exceptions import AISBenchImplementationError
 
+
 class GenInferencerOutputHandler(BaseInferencerOutputHandler):
     """
     Output handler for generation-based inference tasks.

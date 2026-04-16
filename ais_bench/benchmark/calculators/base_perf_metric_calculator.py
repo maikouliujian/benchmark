@@ -541,6 +541,7 @@ class BasePerfMetricCalculator(ABC):
         This method orchestrates the calculation of metrics, common metrics,
         and unit conversion.
         """
+        # todo 指标计算
         self.logger.info("Starting metrics calculation...")
         self.logger.debug(f"Available stages: {list(self.stage_dict.keys())}")
         self._calc_metrics()

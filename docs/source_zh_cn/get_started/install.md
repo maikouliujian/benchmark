@@ -14,6 +14,7 @@ conda activate ais_bench
 
 📦 安装方式（源码安装）
 
+
 AISBench 当前仅提供源码安装方式，请确保安装环境联网：
 ```shell
 git clone https://github.com/AISBench/benchmark.git

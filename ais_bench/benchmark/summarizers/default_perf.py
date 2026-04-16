@@ -178,7 +178,7 @@ class DefaultPerfSummarizer:
             )
             manager_list.append(perf_data)
         conn.close()
-
+    # todo
     def tqdm_monitor(self, total, manager_list, event):
         with tqdm(total=total, desc="Calculating performance details") as pbar:
             while not event.is_set():
@@ -240,6 +240,7 @@ class DefaultPerfSummarizer:
                     if db_name:
                         db_perf_data_map[db_name].append(perf_data)
         if unfound_data_abbrs:
+            # todo
             self.logger.warning(f"Can't find details perf data of [{model_abbr}/{','.join(unfound_data_abbrs)}] in "
                              f"{self.work_dir}, use tmp cache data.")
             tmp_cache_data = self._load_tmp_result(model_abbr, unfound_data_abbrs)
@@ -300,6 +301,7 @@ class DefaultPerfSummarizer:
         if len(set(list(lens.values()))) != 1:
             raise AISBenchDataContentError(
                 SUMM_CODES.DIFF_STRUCTURE_OF_PERF_DATA,
+                # todo
                 f"The length of details perf datas is not the same: {lens}, "
                 f"each perf data should have same data structure"
             )

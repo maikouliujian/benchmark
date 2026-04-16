@@ -73,6 +73,7 @@ def run_single_inferencer(
     )
 
 
+
 @TASKS.register_module()
 class OpenICLApiInferTask(BaseTask):
     """OpenICL API Inference Task.
@@ -155,6 +156,7 @@ class OpenICLApiInferTask(BaseTask):
         data_list, global_indexes = [], []
         finish_cache_data = {}
         try:
+            # todo
             finish_cache_data = self.inferencer.get_finish_data_list()
         except Exception as e:
             self.logger.warning(f"Failed to get finish data list: {e}, infer cache data will be ignored")
@@ -318,6 +320,7 @@ class OpenICLApiInferTask(BaseTask):
         else:
             self.logger.info(f"Debug mode, run with concurrency: {self.concurrency}")
         self.inferencer.total_data_count = len(indexes)
+        # todo 推理！！！！！！
         self.inferencer.inference_with_shm(dataset_shm.name, message_shm.name, indexes, token_bucket)
 
     def _run_multi_process(
@@ -359,6 +362,7 @@ class OpenICLApiInferTask(BaseTask):
                 # Prepare process arguments
                 # NOTE: run_single_inferencer must be importable at module top-level (spawn-safe)
                 p = Process(
+                    # todo 核心运行类
                     target=run_single_inferencer,
                     args=(
                         self.model_cfg,
@@ -476,7 +480,7 @@ class OpenICLApiInferTask(BaseTask):
         self.task_state_manager = task_state_manager
         self.inferencer:BaseApiInferencer = ICL_INFERENCERS.build(self.inferencer_cfg)
         self.clean_failed_results()
-
+        # todo 获取数据list
         data_list, finish_data_count, global_indexes = self._get_data_list()
         if len(data_list) == 0:
             self.logger.warning(f"Get no data to infer, task finished")
@@ -484,7 +488,7 @@ class OpenICLApiInferTask(BaseTask):
 
         # get timestamps from data_list
         timestamps = self._get_timestamps(data_list)
-
+        # todo warmup
         self.warm_up(data_list, task_state_manager)
         dataset_size, dataset_shm, indexes = self._dump_dataset_to_share_memory(data_list, global_indexes)
         # In pressure mode, treat the first `concurrency` requests as the dataset size
@@ -507,6 +511,7 @@ class OpenICLApiInferTask(BaseTask):
 
         try:
             processes = []
+            # todo debug
             if self.debug:
                 message_shm = create_message_share_memory()
                 message_shms[os.getpid()] = message_shm
@@ -532,7 +537,7 @@ class OpenICLApiInferTask(BaseTask):
                     daemon=True,
                 )
                 token_thread.start()
-
+                # todo run debug
                 self._run_debug(
                     dataset_shm,
                     message_shm,
@@ -542,6 +547,7 @@ class OpenICLApiInferTask(BaseTask):
 
             # Run inference with multiple processes
             else:
+                # todo 非debug
                 processes = self._run_multi_process(
                     dataset_shm,
                     indexes,
@@ -704,6 +710,7 @@ if __name__ == "__main__":
         raise e
 
     end_time = time.perf_counter()
+    # todo 推理完成！！！！！！
     logger.info(f"Api infer task time elapsed: {end_time - start_time:.2f}s")
     task_state_manager.update_task_state({"status": "finish"})
     manager_t.join()

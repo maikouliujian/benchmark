@@ -204,7 +204,7 @@ class BaseAPIModel(BaseModel):
             MODEL_CODES.PARSE_STREAM_RSP_NOT_IMPLEMENTED,
             f"{self.__class__.__name__} should be implemented if stream is True"
         )
-
+    # todo 模型推理！！！！！！
     async def generate(
         self,
         input_data: PromptType,

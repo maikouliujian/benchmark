@@ -14,7 +14,7 @@ from ais_bench.benchmark.openicl.icl_inferencer.icl_base_api_inferencer import B
 from ais_bench.benchmark.openicl.icl_inferencer.icl_base_local_inferencer import BaseLocalInferencer
 from ais_bench.benchmark.openicl.icl_inferencer.output_handler.gen_inferencer_output_handler import GenInferencerOutputHandler
 
-
+# todo 精度和性能使用！！！！！！！
 @ICL_INFERENCERS.register_module()
 class GenInferencer(BaseApiInferencer, BaseLocalInferencer):
     """Generation Inferencer class to directly evaluate by generation.
@@ -55,8 +55,9 @@ class GenInferencer(BaseApiInferencer, BaseLocalInferencer):
         self.gen_field_replace_token = gen_field_replace_token or ""
 
         self.output_handler = GenInferencerOutputHandler(perf_mode=self.perf_mode,
-                                                        save_every=self.save_every)
-
+                                                         perf_eval_mode=self.perf_eval_mode,
+                                                         save_every=self.save_every)
+    # todo 推理
     async def do_request(
         self, data: dict, token_bucket: BoundedSemaphore, session: aiohttp.ClientSession
     ):
@@ -74,9 +75,10 @@ class GenInferencer(BaseApiInferencer, BaseLocalInferencer):
         max_out_len = data.pop("max_out_len")
         gold = data.pop("gold", None)
         uid = str(uuid.uuid4()).replace("-", "")
-        output = RequestOutput(self.perf_mode)
+        output = RequestOutput(self.perf_mode, self.perf_eval_mode)
         output.uuid = uid
         await self.status_counter.post()
+        # todo 模型推理！！！！！！
         await self.model.generate(input, max_out_len, output, session=session, **data)
         if output.success:
             await self.status_counter.rev()
@@ -84,7 +86,7 @@ class GenInferencer(BaseApiInferencer, BaseLocalInferencer):
             await self.status_counter.failed()
         await self.status_counter.finish()
         await self.status_counter.case_finish()
-
+        # todo 记录推理结果！！！！！！！
         await self.output_handler.report_cache_info(index, input, output, data_abbr, gold)
 
     def batch_inference(
@@ -140,6 +142,7 @@ class GenInferencer(BaseApiInferencer, BaseLocalInferencer):
             )
             parsed_prompt = self.model.parse_template(prompt, mode="gen")
             prompt_list.append(parsed_prompt)
+        # todo
         self.logger.info(f"Apply ice template finished")
         gold_ans = retriever.get_gold_ans()
         data_list = []

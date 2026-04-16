@@ -73,6 +73,12 @@ mmlu_all_sets = [
     'conceptual_physics',
 ]
 
+mmlu_all_sets = [
+    'college_biology',
+    'college_chemistry',
+    'college_computer_science',
+    'college_mathematics'
+]
 
 mmlu_datasets = []
 for _name in mmlu_all_sets:

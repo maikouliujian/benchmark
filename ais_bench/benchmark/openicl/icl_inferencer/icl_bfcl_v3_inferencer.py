@@ -378,7 +378,8 @@ class BFCLV3FunctionCallInferencer(BaseApiInferencer):
             save_every=save_every,
             **kwargs,
         )
-        if self.perf_mode:
+        # todo
+        if self.perf_mode or self.perf_eval_mode:
             raise AISBenchNotImplementedError(
                 ICLI_CODES.IMPLEMENTATION_ERROR_BFCL_V3_NOT_SUPPORT_PERF_MODE,
                 "BFCLV3FunctionCallInferencer does not support perf_mode."

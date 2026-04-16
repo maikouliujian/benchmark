@@ -170,6 +170,7 @@ class VLLMFunctionCallAPIChat(VLLMCustomAPIChat):
     def __init__(self, *args, **kwargs):
         kwargs['stream'] = False
         super().__init__(*args, **kwargs)
+        # todo
         self.logger.warning("VLLMFunctionCallAPIChat is deprecated, please use VLLMCustomAPIChat instead.")
 
 @MODELS.register_module()

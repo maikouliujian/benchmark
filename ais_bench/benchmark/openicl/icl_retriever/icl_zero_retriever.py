@@ -31,6 +31,7 @@ class ZeroRetriever(BaseRetriever):
         ice_eos_token: Optional[str] = "",
     ) -> None:
         super().__init__(dataset, ice_template, prompt_template, ice_separator, ice_eos_token, 0)
+        # todo
         self.logger.info("Zero Retriever initialized, returning empty shot case for all queries")
 
     def retrieve(self) -> List[List]:

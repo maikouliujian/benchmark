@@ -56,6 +56,7 @@ class TasksMonitor:
         self.refresh_interval = refresh_interval
         self.run_in_background = self.is_running_in_background() if not self.is_debug else True
         self.last_table = None
+        # todo 启动task监听器！！！！！！
         self.logger.info(f"Launch TasksMonitor, "
                     f"PID: {os.getpid()}, "
                     f"Refresh interval: {self.refresh_interval}, "

@@ -63,6 +63,7 @@ class BaseInferencer:
         # identify whether the current process is the main process (avoid covering the method with boolean)
         self.is_main_process = self._is_main_process()
         self.perf_mode = False
+        self.perf_eval_mode = False
         self.task_state_manager = None
 
     @abstractmethod
@@ -143,13 +144,14 @@ class BaseInferencer:
         if "ASCEND_RT_VISIBLE_DEVICES" in os.environ:
             return int(os.getenv("RANK", "0")) == 0
         return is_main_process()
-
+    # todo 获取输出目录！！！！！！
     def get_output_dir(self, output_json_filepath: Optional[str] = None):
         if output_json_filepath is None:
             output_json_filepath = self.output_json_filepath
+        # todo 性能和精度目录不同！！！！！！
         output_json_filepath = osp.join(
             output_json_filepath,
-            "performances" if self.perf_mode else "predictions",
+            "performances" if (self.perf_mode or self.perf_eval_mode) else "predictions",
             model_abbr_from_cfg(self.model_cfg),
         )
         self.logger.debug(f"Output directory: {output_json_filepath}")

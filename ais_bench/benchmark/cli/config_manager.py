@@ -97,6 +97,7 @@ class ConfigManager:
         )
 
     def load_config(self, workflow):
+        # todo 加载配置！！！！！！
         self.cfg = self._get_config_from_arg()
         self._update_and_init_work_dir()
         self._fill_dataset_configs()
