@@ -378,10 +378,10 @@ class BFCLV3FunctionCallInferencer(BaseApiInferencer):
             save_every=save_every,
             **kwargs,
         )
-        if self.perf_mode:
+        if self.perf_mode or self.perf_eval_mode:
             raise AISBenchNotImplementedError(
                 ICLI_CODES.IMPLEMENTATION_ERROR_BFCL_V3_NOT_SUPPORT_PERF_MODE,
-                "BFCLV3FunctionCallInferencer does not support perf_mode."
+                "BFCLV3FunctionCallInferencer does not support perf_mode or perf_eval_mode."
             )
         if hasattr(self.model, "stream") and self.model.stream:
             raise AISBenchNotImplementedError(

@@ -12,6 +12,7 @@ from typing import Any, List, Optional, Union
 import sqlite3
 import numpy as np
 import janus
+import copy
 
 from ais_bench.benchmark.models.output import Output
 from ais_bench.benchmark.utils.logging.logger import AISLogger
@@ -50,6 +51,8 @@ class BaseInferencerOutputHandler:
         """
         self.logger = AISLogger()
         self.results_dict = defaultdict(dict)
+        self.perf_results_dict = defaultdict(dict)
+        self.eval_results_dict = defaultdict(dict)
         self.failed_results_dict = defaultdict(dict)
         self.cache_queue = janus.Queue()
         self.perf_mode = perf_mode
@@ -134,6 +137,62 @@ class BaseInferencerOutputHandler:
                 )
         return result_data
 
+    def get_result_by_mode(
+        self,
+        conn: sqlite3.Connection,
+        data_abbr: str,
+        input: Union[str, List[str]],
+        output: Union[str, Output],
+        gold: Optional[str] = None,
+        perf_mode:bool = True
+    ) -> dict:
+        """
+        Save inference results to the results dictionary.
+
+        Handles both performance and accuracy modes with different data storage
+        strategies. In performance mode, only metrics are stored. In accuracy mode,
+        full input/output data is preserved for evaluation.
+
+        Args:
+            conn (sqlite3.Connection): Database connection to write results to
+            input (Union[str, List[str]]): Input data for the inference
+            output (Union[str, Output]): Output result from inference
+            gold (Optional[str]): Ground truth data for comparison
+
+        Raises:
+            AISBenchImplementationError: If not implemented by subclass
+        """
+        # Performance mode: only store metrics
+        if perf_mode and isinstance(output, Output):
+            result_data = output.get_metrics()
+            result_data = self._extract_and_write_arrays(
+                result_data, conn
+            )
+
+        elif isinstance(output, str):
+            # Accuracy mode: store full input/output data
+            result_data = {
+                "success": True,
+                "uuid": uuid.uuid4().hex[:8],
+                "origin_prompt": input,
+                "prediction": output,
+            }
+
+            if gold:
+                result_data["gold"] = gold
+        else:
+            result_data = self.get_prediction_result(output, gold=gold, input=input, data_abbr=data_abbr)
+        if not result_data.get("success", True):
+            self.all_success = False
+            if isinstance(output, Output) and hasattr(output, "error_info"):
+                result_data["error_info"] = output.error_info
+                self.logger.debug(f"Failed operation at data id {output.uuid}, error info: {result_data['error_info']}")
+            else:
+                self.logger.warning(
+                    f"No error info available for failed operation at data id {output.uuid}"
+                )
+        return result_data
+
     def write_to_json(self, save_dir: str, perf_mode: bool) -> None:
         """
         Write results to JSON files.
@@ -184,6 +243,47 @@ class BaseInferencerOutputHandler:
             raise FileOperationError(
                 ICLI_CODES.INFER_RESULT_WRITE_ERROR,
                 f"Failed to write results to {file_path}: {str(e)}",
+            )
+
+    def write_to_json_perf_eval(self, perf_save_dir: str) -> None:
+        if not isinstance(perf_save_dir, str) or not perf_save_dir.strip():
+            raise ParameterValueError(ICLI_CODES.UNKNOWN_ERROR,
+                                      f"'save_dir' must be a non-empty string representing a directory path, but got {perf_save_dir}")
+        self.logger.info("Start writing result in perf_eval mode.")
+        eval_save_dir = perf_save_dir.replace('performances', 'predictions')
+        # perf_file_path = Path(perf_save_dir)
+        eval_file_path = Path(eval_save_dir)
+        try:
+            # Ensure directory exists
+            Path(perf_save_dir).mkdir(parents=True, exist_ok=True)
+            Path(eval_save_dir).mkdir(parents=True, exist_ok=True)
+            for data_abbr, results_dict in self.perf_results_dict.items():
+                if not results_dict:
+                    continue
+                raw_data_name = data_abbr + "_details.jsonl"
+                file_path = Path(perf_save_dir) / raw_data_name
+                safe_write(results_dict, file_path)
+                self.logger.info(f"Process {os.getpid()} write perf results to {file_path}")
+            for data_abbr, results_dict in self.eval_results_dict.items():
+                if not results_dict:
+                    continue
+                raw_data_name = data_abbr + ".jsonl"
+                file_path = Path(eval_save_dir) / raw_data_name
+                safe_write(results_dict, file_path)
+                self.logger.info(f"Process {os.getpid()} write eval results to {file_path}")
+
+            for data_abbr, results_dict in self.failed_results_dict.items():
+                if not results_dict:
+                    continue
+                failed_data_name = data_abbr + "_failed.jsonl"
+                file_path = Path(eval_save_dir) / failed_data_name
+                safe_write(results_dict, file_path)
+                self.logger.info(f"Process {os.getpid()} write eval failed results to {file_path}")
+
+        except Exception as e:
+            raise FileOperationError(
+                ICLI_CODES.INFER_RESULT_WRITE_ERROR,
+                f"Failed to write results to {eval_file_path}: {str(e)}",
             )
 
     async def report_cache_info(
@@ -451,6 +551,126 @@ class BaseInferencerOutputHandler:
                 self.logger.warning(f"Could not clean up directory {json_path.parent}: {str(e)}")
         self.logger.debug(f"Process {os.getpid()} cache consumer finished")
 
+    def run_cache_consumer_perf_eval(
+        self,
+        save_dir: str,
+        file_name: str,
+        perf_eval_mode: bool = True,
+        save_every: int = 1,
+    ) -> None:
+        self.logger.info("Running cache consumer in perf_eval mode to process queued results.")
+        self.logger.debug("Running cache consumer to process queued results,"
+                     f"save_dir: {save_dir}, "
+                     f"file_name: {file_name}, "
+                     f"perf_eval_mode: {perf_eval_mode}, "
+                     f"save_every: {save_every}")
+        db_path = Path(save_dir) / (Path(file_name).stem + ".db")
+        db_name = db_path.name.replace("tmp_", "")
+        conn = init_db(db_path)
+        json_path = Path(save_dir) / file_name
+
+        # Ensure directories exist
+        Path(save_dir).mkdir(parents=True, exist_ok=True)
+
+        with open(json_path, "a", encoding="utf-8") as f:
+                cache_data = []
+
+                while True:
+                    try:
+                        item = self.cache_queue.sync_q.get(timeout=1)
+                    except queue.Empty:
+                        time.sleep(0.1)
+                        continue
+
+                    if item is None:
+                        break
+                    try:
+                        uid = str(uuid.uuid4())[:8]
+                        id, data_abbr = item[0], item[1]
+                        eval_item = copy.deepcopy(item)
+                        # pref
+                        perf_result_data = self.get_result_by_mode(conn, *item[1:], perf_mode=True)
+                        perf_json_data = {
+                            "data_abbr": data_abbr,
+                            "id": id,
+                        }
+                        perf_json_data.update(perf_result_data)
+                        perf_json_data["db_name"] = db_name
+                        self.perf_results_dict[data_abbr][uid] = perf_json_data
+                        # eval
+                        eval_result_data = self.get_result_by_mode(conn, *eval_item[1:], perf_mode=False)
+                        eval_json_data = {
+                            "data_abbr": data_abbr,
+                            "id": id,
+                        }
+                        eval_json_data.update(eval_result_data)
+                        # accuracy mode: only save successful results in data_abbr.jsonl. otherwise, save to tmp file.
+                        if eval_result_data["success"]:
+                            self.eval_results_dict[data_abbr][uid] = eval_json_data
+                        else:
+                            fail_data = {
+                                "data_abbr": data_abbr,
+                                "id": id,
+                                "input": eval_item[2],
+                                "error_info": eval_result_data["error_info"],
+                            }
+                            self.failed_results_dict[data_abbr][uid] = fail_data
+
+                        # Pre-compute JSON string to avoid repeated serialization
+                        json_str = json.dumps(eval_json_data, ensure_ascii=False) + '\n'
+                        # self.logger.debug(f"Saving result to cache_data: {json_str}")
+                        cache_data.append(json_str)
+
+                        # Write batch if reached save_every threshold
+                        if len(cache_data) == save_every:
+                            f.writelines(cache_data)
+                            f.flush()  # Ensure data is written
+                            cache_data = []
+
+                    except Exception as e:
+                        # Continue processing other items
+                        self.logger.info(f"Failed to process item {item}: {str(e)} in perf_eval mode.")
+                        continue
+                # Write remaining cache data
+                if cache_data:
+                    f.writelines(cache_data)
+                    f.flush()
+
+        # Handle database file based on performance mode
+        conn.commit()
+        conn.close()
+        # if not perf_mode:
+        #     if db_path.exists():
+        #         os.remove(db_path)
+        # else:
+        #     dest = db_path.parent.parent / DB_DATA_DIR
+        #     dest.mkdir(exist_ok=True)
+        #     if db_path.exists():
+        #         shutil.move(str(db_path), str(dest / db_name))
+        dest = db_path.parent.parent / DB_DATA_DIR
+        dest.mkdir(exist_ok=True)
+        if db_path.exists():
+            shutil.move(str(db_path), str(dest / db_name))
+
+        # Clean up JSON file if all operations were successful
+        if self.all_success:
+            if json_path.exists():
+                os.remove(json_path)
+        else:
+            self.logger.warning(
+                f"Not all items were successful, keeping JSON file for debugging: {json_path}"
+            )
+
+        # Clean up empty directories
+        if json_path.parent.exists():
+            try:
+                empty = next(Path(json_path.parent).iterdir(), None) is None
+                if empty:
+                    self.logger.debug(f"Cleaning up empty directory: {json_path.parent}")
+                    shutil.rmtree(json_path.parent)
+            except Exception as e:
+                self.logger.warning(f"Could not clean up directory {json_path.parent}: {str(e)}")
+        self.logger.debug(f"Process {os.getpid()} cache consumer finished")
 
     def stop_cache_consumer(self) -> None:
         """

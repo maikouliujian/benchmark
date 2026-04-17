@@ -63,6 +63,7 @@ class BaseInferencer:
         # identify whether the current process is the main process (avoid covering the method with boolean)
         self.is_main_process = self._is_main_process()
         self.perf_mode = False
+        self.perf_eval_mode = False
         self.task_state_manager = None
 
     @abstractmethod
@@ -149,7 +150,7 @@ class BaseInferencer:
             output_json_filepath = self.output_json_filepath
         output_json_filepath = osp.join(
             output_json_filepath,
-            "performances" if self.perf_mode else "predictions",
+            "performances" if (self.perf_mode or self.perf_eval_mode) else "predictions",
             model_abbr_from_cfg(self.model_cfg),
         )
         self.logger.debug(f"Output directory: {output_json_filepath}")

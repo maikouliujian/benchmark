@@ -76,7 +76,7 @@ class Infer(BaseWorker):
 
         if (
             cfg.get("cli_args", {}).get("merge_ds", False)
-            or cfg.get("cli_args", {}).get("mode") == "perf" # performance mode will enable merge datasets by default
+            or cfg.get("cli_args", {}).get("mode") in ["perf", "perf_eval"] # performance mode will enable merge datasets by default
         ):
             logger.info("Merging datasets with the same model and inferencer...")
             tasks = self._merge_datasets(tasks)
@@ -360,7 +360,11 @@ class AccViz(BaseWorker):
 
     def do_work(self, cfg: ConfigDict) -> int:
         logger.info("Summarizing evaluation results...")
+        if cfg.get("cli_args",{}).get("mode", None) == "perf_eval":
+            self.update_cfg(cfg)
         summarizer_cfg = cfg.get("summarizer", {})
+        if cfg.get("cli_args", {}).get("mode", None) == "perf_eval":
+            summarizer_cfg.pop("calculator", None)
         cfg = self._cfg_pre_process(cfg)
 
         # For subjective summarizer
@@ -423,6 +427,8 @@ class PerfViz(BaseWorker):
         return cfg
 
     def do_work(self, cfg: ConfigDict) -> int:
+        if cfg.get("cli_args",{}).get("mode", None) == "perf_eval":
+            self.update_cfg(cfg)
         summarizer_cfg = cfg.get("summarizer", {})
         summarizer_cfg["config"] = cfg
         summarizer = build_from_cfg(summarizer_cfg)
@@ -439,6 +445,7 @@ WORK_FLOW = dict(
     viz=[AccViz],
     perf=[Infer, PerfViz],
     perf_viz=[PerfViz],
+    perf_eval=[Infer, JudgeInfer, Eval, AccViz, PerfViz]
 )
 
 

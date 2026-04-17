@@ -9,8 +9,9 @@ import numpy as np
 
 
 class Output:
-    def __init__(self, perf_mode: bool = False) -> None:
+    def __init__(self, perf_mode: bool = False, perf_eval_mode: bool = False) -> None:
         self.perf_mode = perf_mode
+        self.perf_eval_mode = perf_eval_mode
         self.success: bool = False
         self.error_info: str = ""
         self.time_points: list[float] = []
@@ -124,7 +125,7 @@ class Output:
 
         This method is called by the model to record timing data.
         """
-        if self.perf_mode:
+        if self.perf_mode or self.perf_eval_mode:
             self.time_points.append(time.perf_counter())
 
     async def clear_time_points(self) -> None:

@@ -72,6 +72,7 @@ class BaseApiInferencer(BaseInferencer):
         # Mode identification
         self.pressure_mode = mode == "pressure"
         self.perf_mode = mode == "perf" or self.pressure_mode
+        self.perf_eval_mode = mode == "perf_eval"
         self.pressure_time = pressure_time
         # status_counter: If perf mode requires additional threads/counters, consider lazy creation to reduce overhead in normal mode.
         self.status_counter = StatusCounter()
@@ -587,15 +588,26 @@ class BaseApiInferencer(BaseInferencer):
         tmp_json_filepath = os.path.join(out_path, "tmp")
         os.makedirs(tmp_json_filepath, exist_ok=True)
         tmp_file_name = f"tmp_{uuid.uuid4().hex[:8]}.jsonl"
-        cache_consumer_thread = threading.Thread(
-            target=self.output_handler.run_cache_consumer,
-            args=(
-                tmp_json_filepath,
-                tmp_file_name,
-                self.perf_mode,
-                self.save_every,
-            ),
-        )
+        if self.perf_eval_mode:
+            cache_consumer_thread = threading.Thread(
+                target=self.output_handler.run_cache_consumer_perf_eval,
+                args=(
+                    tmp_json_filepath,
+                    tmp_file_name,
+                    self.perf_eval_mode,
+                    self.save_every,
+                ),
+            )
+        else:
+            cache_consumer_thread = threading.Thread(
+                target=self.output_handler.run_cache_consumer,
+                args=(
+                    tmp_json_filepath,
+                    tmp_file_name,
+                    self.perf_mode,
+                    self.save_every,
+                ),
+            )
         cache_consumer_thread.start()
         # Notify main process to start generating tokens
         self._sync_main_process_with_message(message_share_memory)
@@ -645,7 +657,10 @@ class BaseApiInferencer(BaseInferencer):
             self.logger.debug(f"Asyncio event loop closed")
 
             # Write data with same abbr to same jsonl file
-            self.output_handler.write_to_json(out_path, self.perf_mode)
+            if self.perf_eval_mode:
+                self.output_handler.write_to_json_perf_eval(out_path)
+            else:
+                self.output_handler.write_to_json(out_path, self.perf_mode)
 
             dataset_share_memory.close()
             message_share_memory.close()

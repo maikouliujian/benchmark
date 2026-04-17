@@ -74,7 +74,7 @@ class GenInferencer(BaseApiInferencer, BaseLocalInferencer):
         max_out_len = data.pop("max_out_len")
         gold = data.pop("gold", None)
         uid = str(uuid.uuid4()).replace("-", "")
-        output = RequestOutput(self.perf_mode)
+        output = RequestOutput(self.perf_mode, self.perf_eval_mode)
         output.uuid = uid
         await self.status_counter.post()
         await self.model.generate(input, max_out_len, output, session=session, **data)
