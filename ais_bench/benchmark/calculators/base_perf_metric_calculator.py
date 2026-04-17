@@ -413,7 +413,7 @@ class BasePerfMetricCalculator(ABC):
                     )
                     self.metrics[key][stage_name]["N"] = decode_count
                     self.logger.debug(f"Adjusted count for {key} in stage {stage_name} to {decode_count}")
-
+    # todo 计算指标！！！！！！！
     def _calc_common_metrics(self):
         """
         Calculate common performance metrics.

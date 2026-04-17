@@ -462,7 +462,7 @@ class BaseApiInferencer(BaseInferencer):
                             except asyncio.CancelledError:
                                 pass
                 else:
-                    # todo
+                    # todo 触发请求！！！！！！
                     await self.do_request(data, token_bucket, session)
         tasks = []
         running_count = 0
@@ -487,6 +487,7 @@ class BaseApiInferencer(BaseInferencer):
                     await asyncio.wait_for(async_queue.put(None), timeout=1)
                     break
                 # Call user-provided async request
+                # todo 执行推理请求的task！！！！！！
                 task = asyncio.create_task(limited_request_func(data))
                 tasks.append(task)
                 task.add_done_callback(_on_task_done)

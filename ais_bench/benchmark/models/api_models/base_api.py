@@ -229,6 +229,7 @@ class BaseAPIModel(BaseModel):
         for _ in range(self.retry):
             try:
                 if self.stream:
+                    # todo 流式推理，走这里！！！！！！
                     await self.stream_infer(request_body, output)
                 else:
                     await self.text_infer(request_body, output)
@@ -259,6 +260,7 @@ class BaseAPIModel(BaseModel):
         return output
 
     async def stream_infer(self, request_body: dict, output: Output):
+        # todo 打点！！！！！！
         await output.record_time_point()
         async with self.session.post(
             url=self.url, json=request_body, headers=self.headers
@@ -274,6 +276,7 @@ class BaseAPIModel(BaseModel):
                     chunk = chunk.removeprefix("data:").strip()
                     if chunk == "[DONE]":
                         break
+                    # todo 打点！！！！！！
                     await output.record_time_point()
                     try:
                         data = json.loads(chunk)

@@ -104,7 +104,7 @@ class DefaultPerfSummarizer:
             return dataset_group[0].get("abbr")
         else:
             return dataset_group[0].get("type").split(".")[-1].lower()
-
+    # todo 计算性能数据！！！！！！
     def _calc_perf_data(
         self,
         manager_list: list,
@@ -161,7 +161,7 @@ class DefaultPerfSummarizer:
             perf_data.pop("input")
             perf_data.pop("prediction")
             perf_data.pop("db_name")
-
+            # todo 开始和结束时间
             perf_data["start_time"] = time_points[0]
             perf_data["end_time"] = time_points[-1]
             perf_data["latency"] = time_points[-1] - time_points[0]
@@ -205,7 +205,7 @@ class DefaultPerfSummarizer:
                         if db_name:
                             tmp_cache_data[db_name].append(perf_data)
         return tmp_cache_data
-
+    # todo 获取性能数据！！！！！！
     def _load_details_perf_data(self, model_cfg: dict, dataset_group: list):
         """Load details performance data and h5 data based on dataset_group.
 
