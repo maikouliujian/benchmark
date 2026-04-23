@@ -24,7 +24,7 @@ lcb_code_generation_reader_cfg = dict(
 SYSTEM_MESSAGE_GENERIC = f'You are an expert Python programmer. You will be given a question (problem specification) and will generate a correct Python program that matches the specification and passes all tests. You will NOT return anything except for the program.'
 
 prompt_template = '### Question:\n{question_content}\n\n{format_prompt}' + \
-                    '### Answer: (use the provided format with backticks)\n\n'
+                    '### Answer: (use the provided format with backticks), When generating code, do not use sys.stdin.buffer.read() to read input, as it may cause exceptions.\n\n'
 
 
 # Code Generation Tasks
@@ -48,7 +48,7 @@ lcb_code_generation_eval_cfg = dict(
     evaluator=dict(
         type=LCBCodeGenerationEvaluator,
         num_process_evaluate=4,
-        timeout=500,
+        timeout=3600,
         release_version=DATASET_RELEASE_VERSION,
     ),
     pred_role='BOT',

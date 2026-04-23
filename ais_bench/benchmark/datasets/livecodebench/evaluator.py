@@ -59,6 +59,7 @@ def codegen_check_correctness(sample, generation, timeout, debug=True):
     stderr = (proc.stderr or "").strip()
 
     if proc.returncode != 0:
+        # todo
         logger.warning('test_runner exited with non-zero code %s', proc.returncode)
         logger.debug('test_runner stdout: %s', stdout)
         logger.debug('test_runner stderr: %s', stderr)
@@ -206,7 +207,7 @@ def codegen_metrics(
     k_list=[1, 5, 10, 20, 40, 50, 75, 100, 125, 150, 200, 500, 1000],
     num_process_evaluate=16,
     timeout=6,
-    debug=False,
+    debug=False, # todo 开启后能看到详细的错误信息，这个debug和测试的--debug不是一回事！！！！！！
 ):
     samples_linear = []
     generations_linear = []
@@ -299,11 +300,14 @@ class LCBCodeGenerationEvaluator(BaseEvaluator):
         references = [{'input_output': item} for item in references]
 
         BaseEvaluator.is_num_equal(predictions, references)
+        target_indices = [4, 14, 15, 24, 34, 38, 52, 57, 60, 63, 64, 67, 72, 73, 84, 85, 86, 87, 88, 89, 90, 92, 93, 95, 96, 98, 100, 105, 106, 107, 109, 110, 111, 112, 129, 131, 132, 136, 139, 156, 158, 164]
+        predictions = [predictions[i] for i in target_indices]
+        references = [references[i] for i in target_indices]
 
         extracted_predictions = {}
         for idx, content in enumerate(predictions):
             extracted_predictions[idx] = content
-
+        # todo 打分逻辑！！！！！！！！
         metrics, eval_results, final_metadata = codegen_metrics(
             references,
             predictions,

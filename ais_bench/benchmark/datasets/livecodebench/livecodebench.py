@@ -70,6 +70,7 @@ class LCBCodeGenerationDataset(BaseDataset):
             item['format_prompt'] = format_prompt
 
             # load test cases
+            # todo  测试case
             public_test_cases = item['public_test_cases']
             public_test_cases = json.loads(item['public_test_cases'])
 
@@ -99,6 +100,7 @@ class LCBCodeGenerationDataset(BaseDataset):
             return item
 
         path = get_data_path(path, local_mode=local_mode)
+
 
         dataset = load_dataset(
             path,  # 'livecodebench/code_generation_lite'
